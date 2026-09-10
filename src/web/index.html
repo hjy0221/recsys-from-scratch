@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="영화부터 책까지, 내 취향으로 이어지는 다음 발견."
+    />
+    <title>NEXT · 취향의 다음 장면</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/lucide.min.js" defer></script>
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">NEXT<span>취향의 다음 장면</span></a>
+      <nav aria-label="콘텐츠 보기">
+        <button class="active" data-view="home">홈</button
+        ><button data-view="all">전체 탐색</button
+        ><button data-view="saved">
+          내가 찜한 목록 <span id="saved-count">0</span></button
+        ><button data-view="rated">내 평점</button>
+      </nav>
+      <button
+        id="profile"
+        class="profile"
+        title="내 평점 보기"
+        aria-label="내 평점 보기"
+      >
+        나
+      </button>
+    </header>
+    <main>
+      <section id="hero" class="hero" aria-labelledby="hero-title">
+        <img
+          id="hero-image"
+          src="/static/images/space.jpg"
+          alt=""
+          fetchpriority="high"
+        />
+        <div class="hero-content">
+          <p class="eyebrow">NEXT COLLECTION <span>가상 콘텐츠</span></p>
+          <p id="hero-category" class="hero-category">오늘의 발견</p>
+          <h1 id="hero-title">취향의 다음 장면</h1>
+          <div id="hero-meta" class="hero-meta"></div>
+          <p id="hero-description"></p>
+          <div class="hero-actions">
+            <button id="hero-open" class="primary" disabled>
+              <i data-lucide="info"></i>자세히 보기</button
+            ><button id="hero-save" class="secondary" disabled>
+              <i data-lucide="plus"></i>내 목록에 추가
+            </button>
+          </div>
+          <p id="hero-reason" class="hero-reason"></p>
+        </div>
+        <div class="hero-caption">영화 · 시리즈 · 다큐 · 도서 · 강좌</div>
+      </section>
+      <section class="discovery-controls" aria-label="콘텐츠 찾기">
+        <div class="types" id="types">
+          <button class="selected" data-type="전체" aria-pressed="true">
+            모두</button
+          ><button data-type="영화" aria-pressed="false">영화</button
+          ><button data-type="시리즈" aria-pressed="false">시리즈</button
+          ><button data-type="다큐" aria-pressed="false">다큐</button
+          ><button data-type="도서" aria-pressed="false">도서</button
+          ><button data-type="강좌" aria-pressed="false">강좌</button>
+        </div>
+        <div class="find-controls">
+          <div class="search">
+            <i data-lucide="search"></i
+            ><input
+              id="search"
+              type="search"
+              aria-label="제목과 장르 검색"
+              placeholder="제목, 장르로 검색"
+            />
+          </div>
+          <select id="genre" aria-label="장르">
+            <option value="전체">모든 장르</option></select
+          ><select id="sort" aria-label="정렬">
+            <option value="recommended">추천순</option>
+            <option value="rating">평점순</option>
+            <option value="year">최신순</option>
+          </select>
+        </div>
+      </section>
+      <div class="collection-meta">
+        <span id="collection-count"></span><span id="taste-count"></span>
+      </div>
+      <div id="status" role="status">컬렉션을 준비하고 있어요…</div>
+      <button id="retry" hidden>다시 불러오기</button>
+      <div id="shelves"></div>
+      <footer>
+        <strong>NEXT</strong>
+        <p>가상 콘텐츠로 만나는, 취향의 다음 장면.</p>
+        <span
+          >추천 실험용 샘플입니다. 영상 재생·수강·구매는 제공하지 않습니다.<br />내
+          평점과 찜 목록은 이 브라우저에만 저장됩니다.</span
+        >
+      </footer>
+    </main>
+    <dialog id="detail" aria-labelledby="detail-title">
+      <button class="close icon-button" aria-label="닫기" title="닫기">
+        <i data-lucide="x"></i>
+      </button>
+      <div id="detail-content"></div>
+    </dialog>
+    <div id="toast" role="status" hidden></div>
+  </body>
+</html>

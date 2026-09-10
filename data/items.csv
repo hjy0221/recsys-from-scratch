@@ -1,0 +1,10 @@
+item_id,title,category
+101,Intro to Recommender Systems,course
+102,Python Data Analysis,course
+103,Machine Learning Basics,course
+104,Deep Learning Foundations,course
+105,FastAPI for ML APIs,course
+106,Vector Search with FAISS,course
+107,Practical PyTorch,course
+108,Data Engineering Essentials,course
+
