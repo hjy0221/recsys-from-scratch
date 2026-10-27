@@ -290,7 +290,10 @@ Python 3.12.14 / macOS arm64에서 테스트 31개가 통과했습니다.
 `0.408970 -> 0.000001`이었습니다. 반올림된 학습 손실이며 검증셋 점수가 아닙니다.
 의존 라이브러리에서 deprecation warning 5개가 발생했으나 실패한 테스트는 없습니다.
 CLI의 다섯 추천 방식과 실제 HTTP의 `/health`, `/recommendations`, `/docs` 응답을 확인했습니다.
-\n---\n\n## English
+
+---
+
+## English
 
 This is a recommendation-system learning project built from scratch for Python 3.12. It starts with popularity recommendations, a user–item matrix, and cosine-similarity user-based collaborative filtering on small CSV files, and extends to Matrix Factorization, Two-Tower, FAISS, and FastAPI without hiding the core logic behind large frameworks.
 
