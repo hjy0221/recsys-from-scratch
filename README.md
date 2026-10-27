@@ -290,3 +290,56 @@ Python 3.12.14 / macOS arm64에서 테스트 31개가 통과했습니다.
 `0.408970 -> 0.000001`이었습니다. 반올림된 학습 손실이며 검증셋 점수가 아닙니다.
 의존 라이브러리에서 deprecation warning 5개가 발생했으나 실패한 테스트는 없습니다.
 CLI의 다섯 추천 방식과 실제 HTTP의 `/health`, `/recommendations`, `/docs` 응답을 확인했습니다.
+\n---\n\n## English
+
+This is a recommendation-system learning project built from scratch for Python 3.12. It starts with popularity recommendations, a user–item matrix, and cosine-similarity user-based collaborative filtering on small CSV files, and extends to Matrix Factorization, Two-Tower, FAISS, and FastAPI without hiding the core logic behind large frameworks.
+
+### Setup and user interface
+
+```bash
+cd recsys-from-scratch
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn src.api:app --host 127.0.0.1 --port 8000
+```
+
+The extended project is validated on Python 3.12. The original environment also provides `.venv312`, used in the Korean examples. Open http://127.0.0.1:8000/ for the NEXT discovery UI; `/docs` is the developer API documentation.
+
+Rate content to update personal recommendations. The UI supports favorites, search, type/genre filters, rating/year sorting, saved items, and viewing personal ratings. Ratings and saved items live in browser localStorage, are not synchronized across devices, and personal ratings are passed only with recommendation requests, not saved in the server's source data. Recommendations combine immediately applicable collaborative filtering with genre/type preferences. Courses are fictional educational samples, with no enrollment or payment. Public deployment needs a Python/PyTorch server and per-account storage; FastAPI serves both UI and API because static hosting alone cannot connect to the local recommendation server.
+
+### Discovery dataset and scoring
+
+The expanded catalog has 308 items: 60 each of movies, series, documentaries, and books, plus 68 courses, across six genres (sci-fi/tech, mystery, drama, nature, travel, arts). It includes 600 synthetic users and 24,000 ratings reproducible with seed 42. `data/catalog.json` stores content metadata and image references; `data/discovery_ratings.csv` contains synthetic preference-based ratings. Regenerate with `python -m src.generate_catalog`.
+
+The home screen includes featured content, horizontal recommendation lists, sample top-ten ratings, similar genres, and type-based recommendations; browsing loads 24 more at a time. Existing course IDs 101–108 and browser storage keys remain compatible. Personal scores combine rating-count-adjusted average rating, genre and type preferences, and neighbor ratings. Ratings are centered on three stars, so one and two stars express negative preference. Genre/type scores and neighbor similarities are adjusted for limited observations. Rated items are excluded; new users get adjusted popularity. Displayed stars are sample averages, not personalized predicted scores or probabilities.
+
+The UI is an educational discovery experience, not a replica of Netflix's algorithm. `src/discovery.py` powers the expanded view; the original eight-course MF/Two-Tower/FAISS training data and checkpoints remain separate for comparison. Success on synthetic ratings does not guarantee user satisfaction.
+
+### CLI and tests
+
+Run `python -m src.main --user-id 1 --top-k 3` or specify `--ratings-path`, `--items-path`, and another user or count as shown above. Run `pytest` for tests. The repository contains CSV data in `data/`, implementation in `src/`, tests in `tests/`, and generated, Git-excluded training artifacts in `artifacts/`.
+
+### Algorithms
+
+Popularity sorts by average rating, then rating count, then item ID, excluding items already rated by the target user. The user–item matrix is represented by sparse nested dictionaries. Cosine similarity compares rating vectors with `dot(u,v) / (||u|| * ||v||)`. Collaborative filtering predicts an unrated item from a similarity-weighted average of neighbor ratings. Only positive-similarity neighbors are used; ties are ordered by user ID, and popularity fills missing recommendations.
+
+### Training, retrieval, and API
+
+Train all models with `python -m src.train --algorithm all --epochs 200 --seed 42`. `artifacts/mf.pt` and `artifacts/two-tower.pt` store weights, ID mappings, training ratings, and loss history. Arbitrary user/item IDs map to contiguous indices. Training runs on CPU, does not treat unobserved ratings as zero, and rejects empty data, infinities/NaNs, and duplicate user–item ratings. Retrain and restart the API after changing data; mismatched checkpoints and CSVs require retraining, and loading a model does not retrain it.
+
+CLI `--algorithm` supports `popular`, `cf` (default), `mf`, `two-tower`, and `faiss`; `--model-dir` changes the checkpoint directory. The Korean section provides command examples and equations.
+
+Matrix Factorization adds the global mean to the dot product of user and item embeddings and minimizes MSE on observed ratings using PyTorch Embedding and Adam, weight decay `1e-4`, and default dimension 16. Scores are uncalibrated predictions, may lie outside 1–5, and are not probabilities; embedding axes have no fixed meaning.
+
+The Two-Tower model applies `Embedding → Linear → ReLU → Linear` to user and item IDs, adds the global mean to their dot product, and trains on observed-rating MSE. Item vectors can be precomputed independently for retrieval. It is currently ID-only rating regression: text/category features, negative sampling, and contrastive learning are not included.
+
+FAISS `IndexFlatIP` searches Two-Tower item vectors by unnormalized inner product, matching the learned score rather than cosine similarity. The global mean does not affect ranking; rated items are removed and ties use item ID. This is exact search, not ANN: all candidates are retrieved for small-sample filtering and tie verification. At scale, consider candidate limits, additional retrieval after filtering, and IVF/HNSW. The index is rebuilt at server start.
+
+Run `python -m src.train --algorithm all` and the Uvicorn command above. Endpoints include `GET /health`, `GET /recommendations?user_id=1&top_k=3&algorithm=faiss`, and interactive `/docs`. Responses contain `user_id`, `algorithm`, and recommendations with `item_id`, `title`, `score`, and `source`. `top_k` is 1–100; invalid options return 422, unseen users receive popular recommendations, and no unrated candidates yields an empty list. Missing model files yield 503 for that model while popularity/CF remain available. Models and indexes initialize once at server startup, not on every request; `RECSYS_DATA_DIR` and `RECSYS_MODEL_DIR` override paths.
+
+### Validation and next steps
+
+Tests cover CF, decreasing training loss, checkpoint restoration, external ID mappings, FAISS versus direct dot products, rated-item exclusion, new users, invalid input, CLI, and API. Training-set MSE is only an implementation check, not evidence of recommendation quality or generalization. Future evaluation should use a time-based train/validation/test split, RMSE and Recall@K/NDCG@K, and a popularity baseline, followed by Two-Tower features and contrastive training, FAISS ANN accuracy/latency comparisons, and API load tests.
+
+Recorded local validation on Python 3.12.14/macOS arm64 passed 31 tests. Rounded training MSE over 200 epochs was approximately `0.399352 → 0.000000` for MF and `0.408970 → 0.000001` for Two-Tower; these are not validation scores. Five dependency deprecation warnings occurred. All five CLI algorithms and actual HTTP responses for `/health`, `/recommendations`, and `/docs` were checked. References: [PyTorch Adam](https://docs.pytorch.org/docs/stable/generated/torch.optim.Adam.html), [FAISS indexes](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes), and [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/).
