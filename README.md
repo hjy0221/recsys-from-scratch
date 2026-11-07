@@ -4,67 +4,550 @@
 
 ## 日本語
 
-Python 3.12 で推薦システムを基礎から実装して学ぶプロジェクトです。小さな CSV データを使い、人気ベース推薦、ユーザー・アイテム行列、コサイン類似度による user-based collaborative filtering から始めます。
+Python 3.12ベースで最初から実装する推奨システム学習プロジェクトです。
 
-### 構成と実行
+フェーズ1の目標は、小さなCSVデータだけで次の推奨方法を直接実装することです。
 
-`data/` にサンプルデータ、`src/` にローダー、推薦器、学習、検索、API、`tests/` に検証、`artifacts/` に学習生成物を置きます。インストール、学習、評価、FastAPI、検索、テストの完全なコマンドと段階別の内容は韓国語セクションにあります。
+- 人気ベースのおすすめ
+- User-Item Matrixの生成
+- cosine similarity ベースの user-based collaborative filtering
 
-過度なフレームワークに依存せず、推薦の核となるロジックと発展的なモデルを段階的に確認できるようにしています。
+過度のフレームワークなしでコアロジックを直接実装して、推奨システムの基本構造を理解しやすくしました。
 
-## English
+## フォルダ構造
 
-This is a recommendation-system learning project built from scratch for Python 3.12. It starts with popularity recommendations, a user–item matrix, and cosine-similarity user-based collaborative filtering on small CSV files, and extends to Matrix Factorization, Two-Tower, FAISS, and FastAPI without hiding the core logic behind large frameworks.
+```text
+recsys-from-scratch/
+  data/
+    items.csv
+    ratings.csv
+  src/
+    __init__.py
+    data_loader.py
+    main.py
+    metrics.py
+    recommender.py
+    models.py
+    training.py
+    train.py
+    retrieval.py
+    api.py
+  tests/
+    test_recommender.py
+    test_models.py
+    test_api.py
+  artifacts/              # 학습 시 생성, Git 제외
+  requirements.txt
+  README.md
+```
 
-### Setup and user interface
+## インストール
 
 ```bash
 cd recsys-from-scratch
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+完全な拡張手順はPython 3.12で検証されます。既存のPython 3.9環境の代わりに3.12仮想環境を使用してください。
+現在提供されているローカル環境では、`source .venv312/bin/activate`ですぐに開始できます。
+
+## 実行
+
+### ユーザー画面
+
+サーバー実行後に[NEXT](http://127.0.0.1:8000/)に接続すると、コンテンツ推奨画面が開きます。
+`/docs`は開発者向けのAPIドキュメントであり、一般ユーザーは`/`を使用しています。
+
+```bash
+source .venv312/bin/activate
 python -m uvicorn src.api:app --host 127.0.0.1 --port 8000
 ```
 
-The extended project is validated on Python 3.12. The original environment also provides `.venv312`, used in the Korean examples. Open http://127.0.0.1:8000/ for the NEXT discovery UI; `/docs` is the developer API documentation.
+コンテンツをタップして評価を残すと、個人の紹介が更新されます。蒸し、検索、種類/ジャンルフィルター、
+評価/年の並べ替え、保存リスト、およびマイ評価の検索をサポートします。私の評価と保存リストはブラウザの
+localStorageに保存され、他のデバイスと同期されません。個人評価はおすすめリクエストのみ
+使用され、サーバーのソースデータには保存されません。新しい個人的な好みに即座に反映可能
+コラボレーションフィルタリングとジャンル/種類の好みを組み合わせます。既存の学習モデル/ APIはそのまま維持します。
 
-Rate content to update personal recommendations. The UI supports favorites, search, type/genre filters, rating/year sorting, saved items, and viewing personal ratings. Ratings and saved items live in browser localStorage, are not synchronized across devices, and personal ratings are passed only with recommendation requests, not saved in the server's source data. Recommendations combine immediately applicable collaborative filtering with genre/type preferences. Courses are fictional educational samples, with no enrollment or payment. Public deployment needs a Python/PyTorch server and per-account storage; FastAPI serves both UI and API because static hosting alone cannot connect to the local recommendation server.
+現在のコースは学習用の仮想サンプルです。受講申込や決済機能はありません。
+インターネットサービスとして公開するには、Python / PyTorchを実行するサーバーの展開とアカウント固有のストレージが必要です。
+静的ページのみをホストするとローカルの推奨サーバーに接続できないため、このプロジェクトはFastAPI
+画面とAPIを一緒に提供します。
 
-### Discovery dataset and scoring
+### 拡張コレクション
 
-The expanded catalog has 308 items: 60 each of movies, series, documentaries, and books, plus 68 courses, across six genres (sci-fi/tech, mystery, drama, nature, travel, arts). It includes 600 synthetic users and 24,000 ratings reproducible with seed 42. `data/catalog.json` stores content metadata and image references; `data/discovery_ratings.csv` contains synthetic preference-based ratings. Regenerate with `python -m src.generate_catalog`.
+- コンテンツ308：映画60、シリーズ60、ドキュメンタリー60、書籍60、コース68。
+- ジャンル6個：SF・テク、ミステリー、ドラマ、自然、旅行、芸術。
+- 仮想ユーザー600人、評価24,000個。乱数シード42で再現可能です。
+- `data/catalog.json`：タイトル、説明、種類、ジャンル、年、長さ、画像参照。
+- `data/discovery_ratings.csv`: ユーザー別好みのジャンル/種類が反映された合成評価。
+- `python -m src.generate_catalog`で拡張データを再生成します。
 
-The home screen includes featured content, horizontal recommendation lists, sample top-ten ratings, similar genres, and type-based recommendations; browsing loads 24 more at a time. Existing course IDs 101–108 and browser storage keys remain compatible. Personal scores combine rating-count-adjusted average rating, genre and type preferences, and neighbor ratings. Ratings are centered on three stars, so one and two stars express negative preference. Genre/type scores and neighbor similarities are adjusted for limited observations. Rated items are excluded; new users get adjusted popularity. Displayed stars are sample averages, not personalized predicted scores or probabilities.
+ホームは代表コンテンツ、横推薦リスト、サンプル評価TOP 10、好きな作品などのジャンル、
+種類別の推薦で構成されます。フルナビゲーションでは、24個ずつさらに表示できます。
+既存の101～108番講座とブラウザの保存キーを維持し、前の評価と蒸しリストを続けます。
 
-The UI is an educational discovery experience, not a replica of Netflix's algorithm. `src/discovery.py` powers the expanded view; the original eight-course MF/Two-Tower/FAISS training data and checkpoints remain separate for comparison. Success on synthetic ratings does not guarantee user satisfaction.
+個人推奨スコアは、評価数を補正した平均評価+ジャンル優先+種類優先+近隣評価です。
+星点は3点を中立に中心化するので、1～2点は否定好みで反映されます。
+ジャンル/種類スコアには少ない評価数の補正を適用し、近隣類似度は共通評価数として
+補正します。既に評価したコンテンツは除外します。新規ユーザーは校正された人気スコアを使用します。
+画面の星はサンプル平均であり、個人の予測スコアや推奨確率ではありません。
 
-### CLI and tests
+Netflixに似たナビゲーション体験を実装したトレーニングモデルであり、実際のNetflixアルゴリズムの複製ではありません。
+拡張画面は`src/discovery.py`を使用します。オリジナル8講座のMF/Two-Tower/FAISSトレーニング データとチェックポイントは、トレーニング比較実験のために別々に保管されます。
+合成評価に基づく推奨事項は、実際のユーザー満足度を保証するものではありません。
 
-Run `python -m src.main --user-id 1 --top-k 3` or specify `--ratings-path`, `--items-path`, and another user or count as shown above. Run `pytest` for tests. The repository contains CSV data in `data/`, implementation in `src/`, tests in `tests/`, and generated, Git-excluded training artifacts in `artifacts/`.
+### CLI
 
-### Algorithms
+ZZプロテクト3ZZ
 
-Popularity sorts by average rating, then rating count, then item ID, excluding items already rated by the target user. The user–item matrix is represented by sparse nested dictionaries. Cosine similarity compares rating vectors with `dot(u,v) / (||u|| * ||v||)`. Collaborative filtering predicts an unrated item from a similarity-weighted average of neighbor ratings. Only positive-similarity neighbors are used; ties are ordered by user ID, and popularity fills missing recommendations.
+予想される出力の例:
 
-### Training, retrieval, and API
+ZZプロテクト4ZZ
 
-Train all models with `python -m src.train --algorithm all --epochs 200 --seed 42`. `artifacts/mf.pt` and `artifacts/two-tower.pt` store weights, ID mappings, training ratings, and loss history. Arbitrary user/item IDs map to contiguous indices. Training runs on CPU, does not treat unobserved ratings as zero, and rejects empty data, infinities/NaNs, and duplicate user–item ratings. Retrain and restart the API after changing data; mismatched checkpoints and CSVs require retraining, and loading a model does not retrain it.
+別のユーザーとして実行することもできます。
 
-CLI `--algorithm` supports `popular`, `cf` (default), `mf`, `two-tower`, and `faiss`; `--model-dir` changes the checkpoint directory. The Korean section provides command examples and equations.
+ZZプロテクト5ZZ
 
-Matrix Factorization adds the global mean to the dot product of user and item embeddings and minimizes MSE on observed ratings using PyTorch Embedding and Adam, weight decay `1e-4`, and default dimension 16. Scores are uncalibrated predictions, may lie outside 1–5, and are not probabilities; embedding axes have no fixed meaning.
+データパスを変更したい場合:
 
-The Two-Tower model applies `Embedding → Linear → ReLU → Linear` to user and item IDs, adds the global mean to their dot product, and trains on observed-rating MSE. Item vectors can be precomputed independently for retrieval. It is currently ID-only rating regression: text/category features, negative sampling, and contrastive learning are not included.
+ZZプロテクト6ZZ
 
-FAISS `IndexFlatIP` searches Two-Tower item vectors by unnormalized inner product, matching the learned score rather than cosine similarity. The global mean does not affect ranking; rated items are removed and ties use item ID. This is exact search, not ANN: all candidates are retrieved for small-sample filtering and tie verification. At scale, consider candidate limits, additional retrieval after filtering, and IVF/HNSW. The index is rebuilt at server start.
+## テスト
 
-Run `python -m src.train --algorithm all` and the Uvicorn command above. Endpoints include `GET /health`, `GET /recommendations?user_id=1&top_k=3&algorithm=faiss`, and interactive `/docs`. Responses contain `user_id`, `algorithm`, and recommendations with `item_id`, `title`, `score`, and `source`. `top_k` is 1–100; invalid options return 422, unseen users receive popular recommendations, and no unrated candidates yields an empty list. Missing model files yield 503 for that model while popularity/CF remain available. Models and indexes initialize once at server startup, not on every request; `RECSYS_DATA_DIR` and `RECSYS_MODEL_DIR` override paths.
+ZZプロテクト7ZZ
 
-### Validation and next steps
+## アルゴリズムの説明
 
-Tests cover CF, decreasing training loss, checkpoint restoration, external ID mappings, FAISS versus direct dot products, rated-item exclusion, new users, invalid input, CLI, and API. Training-set MSE is only an implementation check, not evidence of recommendation quality or generalization. Future evaluation should use a time-based train/validation/test split, RMSE and Recall@K/NDCG@K, and a popularity baseline, followed by Two-Tower features and contrastive training, FAISS ANN accuracy/latency comparisons, and API load tests.
+### 1. 人気に基づく推奨事項
 
-Recorded local validation on Python 3.12.14/macOS arm64 passed 31 tests. Rounded training MSE over 200 epochs was approximately `0.399352 → 0.000000` for MF and `0.408970 → 0.000001` for Two-Tower; these are not validation scores. Five dependency deprecation warnings occurred. All five CLI algorithms and actual HTTP responses for `/health`, `/recommendations`, and `/docs` were checked. References: [PyTorch Adam](https://docs.pytorch.org/docs/stable/generated/torch.optim.Adam.html), [FAISS indexes](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes), and [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/).
+各項目の平均評価とレビュー数を計算します。デフォルトの並べ替え基準は次のとおりです。
+
+1. 平均評価が高い商品
+2. 評価数の多い商品
+3. item_id が小さいアイテム
+
+特定のユーザーに推奨する場合は、すでに評価されているアイテムを除外します。
+
+### 2. ユーザーとアイテムのマトリックス
+
+次のように、評価ログをネストされた辞書に変換します。
+
+ZZプロテクト8ZZ
+
+これは、典型的なユーザー項目マトリックスのスパース表現です。データが大きくなったときにすべて 0 を保存する必要がないため、これはレコメンダー システムでよく使用される式です。
+
+### 3. コサイン類似度
+
+2 人のユーザーの評価ベクトルがどの程度似ているかを計算します。
+
+ZZプロテクト9ZZ
+
+共通して評価される項目が多く、評価の方向性が類似している場合、類似性は高くなります。
+
+### 4. ユーザーベースの協調フィルタリング
+
+推奨ユーザーがまだ評価していないアイテムについては、類似ユーザーの評価の加重平均がとられます。
+
+ZZプロテクト10ZZ
+
+現在の実装では、正の類似性を持つ近傍のみを使用します。類似度が同じ近傍は、ユーザー ID の降順にソートされます。協調フィルタリングの結果が不十分な場合は、人気に基づいた推奨事項がギャップを埋めます。
+
+## ステップ 2 ～ 5: 学習から API まで
+
+行列分解、Two-Tower、FAISS、および FastAPI が実装されています。
+追加ファイルは、`src/models.py`、`training.py`、`train.py`、`retrieval.py`、`api.py`、
+新しいテストは `tests/test_models.py`、`tests/test_api.py` にあります。
+
+### 学んで保存する
+
+ZZプロテクト11ZZ
+
+モデルの重み、ID マッピング、学習スコア、
+紛失履歴を保存します。ランダムなユーザー/アイテム ID も連続したインデックスにマッピングされます。
+トレーニングは CPU 上で実行され、未観測のスコアは 0 ポイントで埋められません。
+空のデータ、無限/NaN、および重複するユーザー項目評価は、トレーニング前に拒否されます。
+データが変更された場合は、API を再トレーニングして再起動します。
+
+```bash
+python -m src.train --algorithm mf --dimension 32 --learning-rate 0.01 --epochs 300
+python -m src.main --user-id 1 --top-k 3 --algorithm popular
+python -m src.main --user-id 1 --top-k 3 --algorithm cf
+python -m src.main --user-id 1 --top-k 3 --algorithm mf
+python -m src.main --user-id 1 --top-k 3 --algorithm two-tower
+python -m src.main --user-id 1 --top-k 3 --algorithm faiss
+```
+
+`--algorithm` のデフォルトは従来の `cf` です。 `--model-dir`でモデルフォルダーを変更できます。
+チェックポイントと入力CSVが異なる場合は再トレーニングが必要です。モデルのロード中
+トレーニングを再実行しないでください。
+
+### 行列の因数分解
+
+ZZプロテクト13ZZ
+
+PyTorch Embedding と Adam を使用し、観測された評価の損失ループと学習ループを直接実装します。
+重みの減衰は `1e-4`、基底ベクトルのサイズは 16 です。出力スコアは未補正の予測値であるため、
+値の範囲は 1 ～ 5 であり、確率ではありません。潜在ベクトルの各軸に固定された意味はありません。
+
+### ツータワー
+
+各ユーザーおよびアイテムに `Embedding -> Linear -> ReLU -> Linear` を適用します。
+全体の平均を 2 つのベクトルの内積に加算し、MF と同じ観測スコア MSE で学習します。
+項目ベクトルはユーザーとは独立して事前に計算し、検索インデックスにリンクできます。現在はIDのみを使用する評価回帰型Two-Towerです。テキスト/カテゴリの特徴
+音声サンプリング、対照学習はまだ含まれていません。
+
+### FAISS
+
+`--algorithm faiss`は学習したTwo-Towerのアイテムベクトルを`IndexFlatIP`に入れて
+内的検索します。ベクトルを正規化しないので、コサインではなく学習スコアなどの内積です。
+全体の平均はすべての候補に同じであるため、検索ランキングには影響しません。
+すでに評価されているアイテムを除いて、タイはアイテムIDでソートされます。
+
+現在、インデックスは正確な検索であり、近似検索（ANN）ではありません。小さなサンプルでタイと除外処理
+検証するために候補全体を照会します。大規模サービスに拡張する場合は、候補数の制限、
+フィルタリング後、追加の照会、IVF / HNSWなどを確認する必要があります。インデックスはサーバーの起動時に再生成されます。
+
+### FastAPIの実行
+
+```bash
+python -m src.train --algorithm all
+python -m uvicorn src.api:app --host 127.0.0.1 --port 8000
+```
+
+- インタラクティブAPIドキュメント：http://127.0.0.1:8000/docs
+- 状態: `GET /health`
+- おすすめ：`GET /recommendations?user_id=1&top_k=3&algorithm=faiss`
+
+```bash
+curl 'http://127.0.0.1:8000/recommendations?user_id=1&top_k=3&algorithm=faiss'
+```
+
+応答には`user_id`、`algorithm`、`recommendations`が含まれます。各おすすめに
+`item_id`、`title`、`score`、`source`があります。 `top_k`は1〜100であり、
+無効なオプションは422を返します。初めて見るユーザーは人気のおすすめを返し、
+推奨する未評価アイテムがない場合は、空のリストを返します。
+学習ファイルがない場合、そのモデル要求は503、既存の人気/ CF推薦は正常に動作します。
+モデルとインデックスはサーバー起動時に一度だけ準備され、要求ごとに学習しません。
+`RECSYS_DATA_DIR`、`RECSYS_MODEL_DIR`環境変数にパスを変更できます。
+
+### 検証範囲と次の課題
+
+```bash
+python -m pytest -q
+```
+
+既存のCFテストに加えて、学習損失の減少、チェックポイントの復元、外部IDマッピング、FAISSとの直接内積
+一致、既に評価された項目を除外、新規ユーザー、入力エラー、CLI、API を検証します。
+サンプル全体で学習したMSEは学習動作を確認するためのものであり、推奨品質や一般化パフォーマンスの証拠ではありません。
+実際のポートフォリオ評価には、時間ベースのtrain/validation/test分離、RMSEとRecall@K/NDCG@K、
+人気の推奨コントラスト比較を追加します。その後、Two-Towerに特徴と対照学習を追加し、
+FAISS近似検索の精度/遅延時間比較、API負荷テストの順に拡張できます。
+
+公式参考資料：[PyTorch Adam]（https://docs.pytorch.org/docs/stable/generated/torch.optim.Adam.html）、
+[FAISSインデックス](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes)、
+[FastAPIテスト]（https://fastapi.tiangolo.com/tutorial/testing/）。
+
+### ローカル検証履歴
+
+Python 3.12.14 / macOS arm64で31のテストが合格しました。
+200エポック学習MSEはMF薬`0.399352 -> 0.000000`、Two-Tower薬
+`0.408970 -> 0.000001`でした。丸められた学習損失であり、検証セットのスコアではありません。
+依存ライブラリで5つのデプレケーション警告が発生しましたが、失敗したテストはありません。
+CLIの5つの推奨方法と実際のHTTPの`/health`、`/recommendations`、`/docs`の応答を確認しました。
+
+## English
+
+This is a recommender system learning project implemented from scratch based on Python 3.12.
+
+The goal of phase 1 is to directly implement the following recommendation method with only small CSV data.
+
+- Popularity-based recommendations
+- Creation of User-Item Matrix
+- User-based collaborative filtering based on cosine similarity
+
+We made the basic structure of the recommendation system easy to understand by directly implementing the core logic without an excessive framework.
+
+## Folder structure
+
+```text
+recsys-from-scratch/
+  data/
+    items.csv
+    ratings.csv
+  src/
+    __init__.py
+    data_loader.py
+    main.py
+    metrics.py
+    recommender.py
+    models.py
+    training.py
+    train.py
+    retrieval.py
+    api.py
+  tests/
+    test_recommender.py
+    test_models.py
+    test_api.py
+  artifacts/              # 학습 시 생성, Git 제외
+  requirements.txt
+  README.md
+```
+
+## Installation
+
+```bash
+cd recsys-from-scratch
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+The entire extension step is verified in Python 3.12. Use the 3.12 virtual environment instead of the existing Python 3.9 environment.
+In the local environment currently provided, you can get started right away with `source .venv312/bin/activate`.
+
+## run
+
+### User screen
+
+After running the server and connecting to [NEXT](http://127.0.0.1:8000/), a content recommendation screen will open.
+`/docs` is an API document for developers, while general users use `/`.
+
+```bash
+source .venv312/bin/activate
+python -m uvicorn src.api:app --host 127.0.0.1 --port 8000
+```
+
+If you click on the content and leave a rating, your personal recommendation will be updated. Save, search, type/genre filter,
+Supports rating/year sorting, saved lists, and viewing my ratings. My ratings and saved lists can be found in your browser.
+It is stored in localStorage and does not sync with other devices. Personal ratings are only available for recommendation requests
+It is used and not stored in the original data on the server. New personal preferences can be immediately reflected
+Combines collaborative filtering and genre/type preferences. Existing learning models/APIs remain intact.
+
+The current course is a virtual sample for learning purposes. There is no course registration or payment function.
+To publish as an Internet service, you need to deploy a server to run Python/PyTorch and a repository for each account.
+This project supports FastAPI because hosting only static pages will not allow you to connect to local referral servers.
+Provides both screen and API.
+
+### Extended Collection
+
+- 308 contents: 60 movies, 60 series, 60 documentaries, 60 books, 68 courses.
+- 6 genres: SF/Tech, Mystery, Drama, Nature, Travel, Art.
+- 600 virtual users, 24,000 ratings. It can be reproduced with a random number seed of 42.
+- `data/catalog.json`: Title, description, type, genre, year, length, image reference.
+- `data/discovery_ratings.csv`: Composite rating reflecting each user’s preferred genre/type.
+- Regenerate extended data with `python -m src.generate_catalog`.
+
+Home contains genres such as representative content, horizontal recommendation list, top 10 sample ratings, and favorite works,
+It consists of recommendations by type. You can see 24 more in full navigation.
+The existing courses 101 to 108 and browser save keys will be maintained to maintain previous ratings and wish lists.
+
+The personal recommendation score is the average rating adjusted for the number of reviews + genre preference + type preference + neighborhood rating.
+The star rating is centered around 3 points as neutral, so 1 to 2 points are reflected as negative taste.
+Correction for the small number of evaluations is applied to the genre/type score, and neighbor similarity is calculated by the number of common evaluations.
+Correct. Excludes content that has already been rated. New users use a calibrated popularity score.
+The star ratings on screen are sample averages and are not individual predicted scores or odds of being recommended.
+
+This is an educational model that implements a Netflix-like browsing experience and is not a replication of the actual Netflix algorithm.
+The extended screen uses `src/discovery.py`. MF/Two-Tower/FAISS in the original 8 coursesTraining data and checkpoints are kept separate for training comparison experiments.
+Recommendations that operate on synthetic ratings do not guarantee actual user satisfaction.
+
+### CLI
+
+```bash
+python -m src.main --user-id 1 --top-k 3
+```
+
+Example expected output:
+
+```text
+Recommendations for user 1
+
+rank  item_id  title                         score   source
+1     105      FastAPI for ML APIs           4.739   collaborative
+2     107      Practical PyTorch             4.505   collaborative
+3     104      Deep Learning Foundations     4.495   collaborative
+```
+
+You can also run it as a different user.
+
+```bash
+python -m src.main --user-id 4 --top-k 5
+```
+
+If you want to change the data path:
+
+```bash
+python -m src.main \
+  --ratings-path data/ratings.csv \
+  --items-path data/items.csv \
+  --user-id 1 \
+  --top-k 3
+```
+
+## test
+
+```bash
+pytest
+```
+
+## Algorithm description
+
+### 1. Popularity-based recommendations
+
+Calculate the average rating and number of reviews for each item. The default sorting criteria are:
+
+1. Items with a high average rating
+2. Items with a high number of ratings
+3. Items with small item_id
+
+When recommending to a specific user, exclude items that have already been rated.
+
+### 2. User-Item Matrix
+
+Convert the rating log into a nested dictionary like this:
+
+```python
+{
+    1: {101: 5.0, 102: 4.0},
+    2: {101: 4.0, 103: 5.0},
+}
+```
+
+This is a sparse representation of a typical User-Item Matrix. This is an expression often used in recommender systems because there is no need to store all 0s when the data grows.
+
+### 3. Cosine Similarity
+
+Calculate how similar the rating vectors of two users are.
+
+```text
+similarity(u, v) = dot(u, v) / (||u|| * ||v||)
+```
+
+If there are many items evaluated in common and the rating directions are similar, the similarity increases.
+
+### 4. User-Based Collaborative Filtering
+
+For items that the recommended user has not yet rated, we take a weighted average of the ratings of similar users.
+
+```text
+predicted_score(user, item)
+  = sum(similarity(user, neighbor) * neighbor_rating)
+    / sum(similarity(user, neighbor))
+```
+
+The current implementation only uses neighbors with positive similarity. Neighbors with the same similarity are sorted in descending order of user ID. If collaborative filtering results are insufficient, popularity-based recommendations fill in the gaps.
+
+## Steps 2 to 5: From learning to API
+
+Matrix Factorization, Two-Tower, FAISS, and FastAPI are implemented.
+Additional files are `src/models.py`, `training.py`, `train.py`, `retrieval.py`, `api.py`,
+The new tests are in `tests/test_models.py`, `tests/test_api.py`.
+
+### Learn and Save
+
+```bash
+python -m src.train --algorithm all --epochs 200 --seed 42
+```
+
+Model weights, ID mapping, learning scores,
+Save your loss history. Random user/item IDs are also mapped to consecutive indices.
+Training is performed on the CPU, and unobserved scores are not filled with 0 points.
+Empty data, infinity/NaN, and duplicate user-item ratings are rejected before training.
+If the data changes, retrain and restart the API.
+
+```bash
+python -m src.train --algorithm mf --dimension 32 --learning-rate 0.01 --epochs 300
+python -m src.main --user-id 1 --top-k 3 --algorithm popular
+python -m src.main --user-id 1 --top-k 3 --algorithm cf
+python -m src.main --user-id 1 --top-k 3 --algorithm mf
+python -m src.main --user-id 1 --top-k 3 --algorithm two-tower
+python -m src.main --user-id 1 --top-k 3 --algorithm faiss
+```
+
+`--algorithm` defaults to the legacy `cf`. You can change the model folder with `--model-dir`.
+If the checkpoint and input CSV are different, retraining is required. In the process of loading the model
+Do not re-run training.
+
+### Matrix Factorization
+
+```text
+predicted_rating(u, i) = global_mean + dot(user_embedding[u], item_embedding[i])
+loss = MSE(observed_ratings, predicted_ratings)
+```
+
+We use PyTorch Embedding and Adam, and directly implement the loss and learning loops for the observed ratings.
+Weight attenuation is `1e-4`, base vector size is 16. Since the output score is the uncorrected predicted value,
+It can range from 1 to 5 and is not a probability. There is no fixed meaning for each axis of the latent vector.
+
+### Two-Tower
+
+Apply `Embedding -> Linear -> ReLU -> Linear` to each user and item.
+Add the overall mean to the dot product of the two vectors and learn with the same observation score MSE as MF.
+Item vectors can be pre-computed independently of the user and linked to the search index.Currently, it is a rating regression type Two-Tower that only uses ID. Text/category features or
+It does not yet include voice sampling or contrastive learning.
+
+### FAISS
+
+`--algorithm faiss` puts the learned Two-Tower item vector into `IndexFlatIP`.
+Dot product search. We don't normalize the vector, so it's a dot product equal to the training score, not cosine.
+The overall average is the same for all candidates, so it doesn't affect search rankings.
+Tied scores are sorted by item ID, excluding items that have already been rated.
+
+The current index is exact search, not approximate search (ANN). Handling ties and exclusions in small samples
+View all candidates for verification. When scaling to large-scale services, limit the number of candidates;
+After filtering, you will need to review additional inquiries, IVF/HNSW, etc. Indexes are regenerated when the server starts.
+
+### FastAPI execution
+
+```bash
+python -m src.train --algorithm all
+python -m uvicorn src.api:app --host 127.0.0.1 --port 8000
+```
+
+- Interactive API Documentation: http://127.0.0.1:8000/docs
+- Status: `GET /health`
+- Recommended: `GET /recommendations?user_id=1&top_k=3&algorithm=faiss`
+
+```bash
+curl 'http://127.0.0.1:8000/recommendations?user_id=1&top_k=3&algorithm=faiss'
+```
+
+Responses include `user_id`, `algorithm`, and `recommendations`. In each recommendation
+There are `item_id`, `title`, `score`, and `source`. `top_k` is 1 to 100,
+An invalid option returns 422. First-time users will return popular recommendations,
+If there are no unrated items to recommend, it returns an empty list.
+If there is no training file, the model request will receive 503, and existing popularity/CF recommendations will operate normally.
+Models and indices are prepared once at server startup and are not trained per request.
+You can change the path with the `RECSYS_DATA_DIR` and `RECSYS_MODEL_DIR` environment variables.
+
+### Verification scope and next tasks
+
+```bash
+python -m pytest -q
+```
+
+In addition to traditional CF tests, learning loss reduction, checkpoint restoration, external ID mapping, FAISS and direct dot product
+Verify matches, exclude already rated items, new users, input errors, CLI and API.
+MSEs trained across samples are intended to confirm learning behavior and are not evidence of recommendation quality or generalization performance.
+Actual portfolio evaluation includes time-based train/validation/test separation, RMSE and Recall@K/NDCG@K,
+Add comparisons to popular recommendations. Afterwards, feature and contrast learning were added to Two-Tower,
+It can be expanded in that order: accuracy/latency comparison of FAISS approximate search, and API load testing.
+
+Official references: [PyTorch Adam](https://docs.pytorch.org/docs/stable/generated/torch.optim.Adam.html),
+[FAISS INDEX](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes),
+[FastAPI Test](https://fastapi.tiangolo.com/tutorial/testing/).
+
+### Local verification history
+
+31 tests passed on Python 3.12.14 / macOS arm64.
+200 epoch learning MSE is about MF `0.399352 -> 0.000000`, Two-Tower about
+It was `0.408970 -> 0.000001`. This is the rounded training loss, not the validation set score.
+There were 5 deprecation warnings in dependent libraries, but no tests failed.
+We checked the five recommended methods of CLI and the actual HTTP responses `/health`, `/recommendations`, and `/docs`.
 
 ## 한국어
 
