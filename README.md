@@ -4,6 +4,8 @@
 
 ## 日本語
 
+[日本語](https://github.com/hjy0221/recsys-from-scratch#%E6%97%A5%E6%9C%AC%E8%AA%9E) · [English](https://github.com/hjy0221/recsys-from-scratch#english) · [한국어](https://github.com/hjy0221/recsys-from-scratch#%ED%95%9C%EA%B5%AD%EC%96%B4)
+
 Python 3.12ベースで最初から実装する推奨システム学習プロジェクトです。
 
 フェーズ1の目標は、小さなCSVデータだけで次の推奨方法を直接実装することです。
@@ -259,6 +261,8 @@ Python 3.12.14 / macOS arm64で31のテストが合格しました。
 CLIの5つの推奨方法と実際のHTTPの`/health`、`/recommendations`、`/docs`の応答を確認しました。
 
 ## English
+
+[日本語](https://github.com/hjy0221/recsys-from-scratch#%E6%97%A5%E6%9C%AC%E8%AA%9E) · [English](https://github.com/hjy0221/recsys-from-scratch#english) · [한국어](https://github.com/hjy0221/recsys-from-scratch#%ED%95%9C%EA%B5%AD%EC%96%B4)
 
 This is a recommender system learning project implemented from scratch based on Python 3.12.
 
@@ -550,6 +554,8 @@ There were 5 deprecation warnings in dependent libraries, but no tests failed.
 We checked the five recommended methods of CLI and the actual HTTP responses `/health`, `/recommendations`, and `/docs`.
 
 ## 한국어
+
+[日本語](https://github.com/hjy0221/recsys-from-scratch#%E6%97%A5%E6%9C%AC%E8%AA%9E) · [English](https://github.com/hjy0221/recsys-from-scratch#english) · [한국어](https://github.com/hjy0221/recsys-from-scratch#%ED%95%9C%EA%B5%AD%EC%96%B4)
 
 Python 3.12 기준으로 처음부터 구현하는 추천시스템 학습 프로젝트입니다.
 
